@@ -1,0 +1,2121 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>運算順序小火車：創建課堂賽與四則混合計算</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --macaron-pink: #FFB5C2;
+      --macaron-pink-dark: #F47C94;
+      --macaron-mint: #A8E6CF;
+      --macaron-mint-dark: #4ECDC4;
+      --macaron-yellow: #FFE699;
+      --macaron-yellow-dark: #F7B731;
+      --macaron-blue: #B5D8FF;
+      --macaron-blue-dark: #5B9BD5;
+      --macaron-lavender: #D8C2FF;
+      --macaron-lavender-dark: #9B72F2;
+      --macaron-cream: #FFFDF7;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Nunito', 'Noto Sans TC', sans-serif;
+      background: linear-gradient(180deg, #CBE8FF 0%, #E6F5FF 55%, #D5F2C8 55%, #B8E6A3 100%);
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 16:9 Widescreen Stage Container */
+    #app-stage {
+      width: 100%;
+      max-width: 1440px;
+      aspect-ratio: 16 / 9;
+      min-height: 680px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      box-shadow: 0 20px 50px rgba(62, 92, 118, 0.22), 0 0 0 6px #FFFFFF;
+      background: linear-gradient(180deg, #BEE3FF 0%, #E7F6FF 54%, #C8EEB4 54%, #9EDB84 100%);
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media (max-width: 1024px) {
+      #app-stage {
+        aspect-ratio: auto;
+        min-height: 100vh;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+
+    /* Decorative Floating Clouds */
+    .cloud-float {
+      animation: floatCloud 32s linear infinite;
+    }
+    .cloud-float-slow {
+      animation: floatCloud 46s linear infinite;
+    }
+    @keyframes floatCloud {
+      0% { transform: translateX(-140px); }
+      100% { transform: translateX(1520px); }
+    }
+
+    /* Chalkboard Styling */
+    .chalkboard-frame {
+      background: linear-gradient(180deg, #355E4E 0%, #27473B 100%);
+      border: 8px solid #C88A55;
+      box-shadow:
+        inset 0 4px 14px rgba(0, 0, 0, 0.38),
+        0 8px 20px rgba(74, 52, 33, 0.22),
+        0 0 0 3px #8F5B30;
+      border-radius: 22px;
+      position: relative;
+    }
+
+    .chalk-text {
+      color: #FFFDF5;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.28);
+      letter-spacing: 0.03em;
+    }
+
+    /* Setup Option Cards */
+    .setup-card {
+      background: rgba(255, 253, 247, 0.92);
+      backdrop-filter: blur(6px);
+      border: 4px solid #FFFFFF;
+      border-radius: 26px;
+      box-shadow: 0 10px 28px rgba(74, 105, 132, 0.14);
+    }
+
+    .topic-chip {
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border: 3px solid #E2E8F0;
+    }
+    .topic-chip:hover {
+      transform: translateY(-2px);
+    }
+    .topic-chip.selected {
+      border-color: #FF85A1;
+      background: linear-gradient(135deg, #FFF5F8 0%, #FFE4EC 100%);
+      box-shadow: 0 5px 0 #F47C94;
+    }
+
+    .seg-btn {
+      transition: all 0.18s ease;
+      border: 2.5px solid #E2E8F0;
+    }
+    .seg-btn.active {
+      background: linear-gradient(135deg, #7CD4B8 0%, #4ECDC4 100%);
+      color: #FFFFFF;
+      border-color: #FFFFFF;
+      box-shadow: 0 4px 0 #2E9E95;
+      transform: translateY(-1px);
+    }
+
+    /* Interactive Train Carriages & Operators */
+    .train-wrapper {
+      transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .train-chug {
+      animation: chugBounce 0.45s ease-in-out infinite alternate;
+    }
+    @keyframes chugBounce {
+      0% { transform: translateY(0px); }
+      100% { transform: translateY(-3px); }
+    }
+
+    .train-arrive {
+      animation: arriveFromLeft 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    @keyframes arriveFromLeft {
+      0% { transform: translateX(-750px); }
+      100% { transform: translateX(0); }
+    }
+
+    .clickable-op {
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .clickable-op:hover {
+      transform: scale(1.14) translateY(-4px);
+      filter: drop-shadow(0 8px 14px rgba(255, 138, 165, 0.55));
+    }
+    .clickable-op:active {
+      transform: scale(0.95);
+    }
+
+    .clickable-carriage {
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .clickable-carriage:hover {
+      transform: translateY(-4px) scale(1.03);
+    }
+
+    /* Wrong Shake Animation */
+    .shake-error {
+      animation: gentleShake 0.48s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+    @keyframes gentleShake {
+      10%, 90% { transform: translate3d(-4px, 0, 0) rotate(-1.5deg); }
+      20%, 80% { transform: translate3d(6px, 0, 0) rotate(1.5deg); }
+      30%, 50%, 70% { transform: translate3d(-7px, 0, 0) rotate(-2deg); }
+      40%, 60% { transform: translate3d(7px, 0, 0) rotate(2deg); }
+    }
+
+    /* Merge Pop Animation */
+    .pop-merge {
+      animation: popMerge 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes popMerge {
+      0% { transform: scale(0.5); opacity: 0.3; }
+      70% { transform: scale(1.12); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Wheel Spin */
+    .wheel-spin {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: spinWheel 1.4s linear infinite;
+    }
+    @keyframes spinWheel {
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Steam Puff */
+    .steam-puff {
+      animation: steamRise 1.8s ease-out infinite;
+    }
+    @keyframes steamRise {
+      0% { transform: translate(0, 0) scale(0.4); opacity: 0.85; }
+      100% { transform: translate(-24px, -32px) scale(1.3); opacity: 0; }
+    }
+
+    /* Multi-level Bracket Visual Frames */
+    .bracket-curly {
+      border: 3px dashed #9B72F2;
+      background: rgba(216, 194, 255, 0.25);
+      border-radius: 26px;
+      padding: 5px 8px;
+    }
+    .bracket-square {
+      border: 3px dashed #5B9BD5;
+      background: rgba(181, 216, 255, 0.28);
+      border-radius: 22px;
+      padding: 4px 7px;
+    }
+    .bracket-round {
+      border: 3px dashed #FF85A1;
+      background: rgba(255, 181, 194, 0.32);
+      border-radius: 18px;
+      padding: 3px 6px;
+    }
+
+    /* Keypad Buttons */
+    .num-key {
+      transition: all 0.14s ease;
+      box-shadow: 0 4px 0 rgba(0, 0, 0, 0.14);
+    }
+    .num-key:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.14);
+    }
+
+    /* Confetti Particle */
+    .confetti-piece {
+      position: absolute;
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+      pointer-events: none;
+      animation: confettiFall 1.7s ease-out forwards;
+    }
+    @keyframes confettiFall {
+      0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) rotate(720deg) scale(0.4); opacity: 0; }
+    }
+
+    /* Custom Scrollbar for Compact Containers */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.45);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app-stage">
+    <!-- Background Scenery SVG (Sky, Clouds, Macaron Hills, Flowers, Tracks) -->
+    <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1440 810" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#B9E2FF" />
+          <stop offset="100%" stop-color="#EAF7FF" />
+        </linearGradient>
+        <linearGradient id="hillBack" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#B8ECC6" />
+          <stop offset="100%" stop-color="#8FD9A8" />
+        </linearGradient>
+        <linearGradient id="hillFront" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#C9F2A9" />
+          <stop offset="100%" stop-color="#96DC7A" />
+        </linearGradient>
+        <linearGradient id="groundGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#A6E388" />
+          <stop offset="100%" stop-color="#7AC95B" />
+        </linearGradient>
+      </defs>
+
+      <!-- Sky -->
+      <rect width="1440" height="460" fill="url(#skyGrad)" />
+
+      <!-- Cute Sun -->
+      <g transform="translate(1335, 80)">
+        <circle r="44" fill="#FFE680" opacity="0.45" />
+        <circle r="31" fill="#FFD452" />
+      </g>
+
+      <!-- Floating Fluffy Clouds -->
+      <g class="cloud-float" transform="translate(120, 65)" opacity="0.92">
+        <path d="M25,45 Q10,45 10,30 Q10,16 24,15 Q30,2 48,4 Q65,5 70,19 Q86,20 86,33 Q86,45 70,45 Z" fill="#FFFFFF" />
+      </g>
+      <g class="cloud-float-slow" transform="translate(720, 48)" opacity="0.85">
+        <path d="M30,52 Q12,52 12,35 Q12,18 29,17 Q36,2 58,4 Q78,6 84,22 Q102,23 102,38 Q102,52 84,52 Z" fill="#FFFFFF" />
+      </g>
+
+      <!-- Rolling Macaron Hills -->
+      <path d="M0,455 Q260,355 560,435 T1140,415 T1440,395 L1440,540 L0,540 Z" fill="url(#hillBack)" />
+      <path d="M0,485 Q340,410 710,475 T1440,445 L1440,580 L0,580 Z" fill="url(#hillFront)" />
+
+      <!-- Meadow Ground -->
+      <rect y="515" width="1440" height="295" fill="url(#groundGrad)" />
+
+      <!-- Cute Macaron Flowers -->
+      <g transform="translate(215, 755)">
+        <circle cx="0" cy="0" r="9" fill="#FFB5C2" />
+        <circle cx="0" cy="0" r="4" fill="#FFE680" />
+      </g>
+      <g transform="translate(560, 765)">
+        <circle cx="0" cy="0" r="10" fill="#FFFDF7" />
+        <circle cx="0" cy="0" r="4.5" fill="#FFB84D" />
+      </g>
+      <g transform="translate(980, 758)">
+        <circle cx="0" cy="0" r="9" fill="#D8C2FF" />
+        <circle cx="0" cy="0" r="4" fill="#FFE680" />
+      </g>
+
+      <!-- Main Bottom Railway Embankment & Wooden Sleepers (Shown during gameplay) -->
+      <g id="main-railway-bg" transform="translate(0, 672)">
+        <rect x="0" y="14" width="1440" height="26" fill="#D7CFC7" />
+        <rect x="0" y="34" width="1440" height="7" fill="#B8AEA4" />
+        <g id="railway-sleepers" fill="#A97142" stroke="#7A4E29" stroke-width="1.5"></g>
+        <rect x="0" y="6" width="1440" height="5.5" fill="#7D8B99" />
+        <rect x="0" y="21" width="1440" height="6.5" fill="#687684" />
+      </g>
+    </svg>
+
+    <!-- Confetti Layer -->
+    <div id="confetti-layer" class="absolute inset-0 pointer-events-none z-50 overflow-hidden"></div>
+
+    <!-- =================================================================== -->
+    <!-- VIEW 1: 「創建課堂賽」設定頁 (SETUP VIEW)                           -->
+    <!-- =================================================================== -->
+    <section id="view-setup" class="relative z-20 flex-1 flex flex-col px-5 sm:px-8 py-3.5 overflow-y-auto">
+      <!-- Setup Header -->
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-[#FFFDF7] border-4 border-[#FFB5C2] rounded-full px-5 py-1.5 shadow-md flex items-center gap-2.5">
+            <span class="text-2xl sm:text-3xl">🚂</span>
+            <div>
+              <h1 class="text-xl sm:text-2xl font-black text-[#D95374] leading-tight">
+                運算順序小火車 · 創建課堂賽
+              </h1>
+              <p class="text-xs font-bold text-[#718096]">
+                澳門小學四年級數學｜四則混合計算與括號運算順序互動平台
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <!-- Sound Toggle -->
+          <button
+            id="setup-sound-btn"
+            onclick="toggleSound()"
+            class="w-11 h-11 rounded-full bg-[#FFFDF7] hover:bg-[#FFF0F4] border-3 border-[#FFB5C2] text-[#E05275] shadow flex items-center justify-center text-xl cursor-pointer transition"
+            title="音效開關"
+          >
+            🎵
+          </button>
+        </div>
+      </div>
+
+      <!-- Setup 2-Column Main Grid -->
+      <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        <!-- Left Column (7 cols): Topic Categories & Race Rules -->
+        <div class="lg:col-span-7 setup-card p-4 sm:p-5 flex flex-col justify-between gap-3">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-base sm:text-lg font-black text-[#4A5568] flex items-center gap-2">
+                <span class="bg-[#FFB5C2] text-white w-7 h-7 rounded-full inline-flex items-center justify-center text-sm">1</span>
+                選擇計算題型（可多選混合或單項專練）
+              </h2>
+              <button
+                onclick="selectAllTopics()"
+                class="text-xs font-extrabold text-[#D95374] bg-[#FFF0F4] hover:bg-[#FFE0E9] px-3 py-1 rounded-full border border-[#FFB5C2] cursor-pointer"
+              >
+                ✨ 全選混合練習
+              </button>
+            </div>
+
+            <!-- 4 Requested Topic Cards -->
+            <div id="topic-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Practice Mode + Race Parameters -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t-2 border-dashed border-[#E2E8F0]">
+            <!-- Practice Mode -->
+            <div class="bg-[#F8FAFC] rounded-2xl p-3 border-2 border-[#EDF2F7]">
+              <div class="text-xs font-black text-[#4A5568] mb-2 flex items-center gap-1.5">
+                <span>🎯</span> 練習與作答模式
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <button
+                  id="btn-mode-order"
+                  onclick="setSetupPracticeMode(false)"
+                  class="seg-btn text-left px-3 py-2 rounded-xl text-xs font-extrabold bg-white text-[#4A5568] cursor-pointer flex items-center justify-between"
+                >
+                  <span>⚡ 只練運算順序（白板快問快答）</span>
+                  <span class="mode-check"></span>
+                </button>
+                <button
+                  id="btn-mode-full"
+                  onclick="setSetupPracticeMode(true)"
+                  class="seg-btn active text-left px-3 py-2 rounded-xl text-xs font-extrabold bg-white text-[#4A5568] cursor-pointer flex items-center justify-between"
+                >
+                  <span>🧮 順序＋計算完整練習（脫式求值）</span>
+                  <span class="mode-check">✓</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Players, Track Length & Timer -->
+            <div class="bg-[#F8FAFC] rounded-2xl p-3 border-2 border-[#EDF2F7] flex flex-col justify-between gap-2">
+              <!-- Player Count -->
+              <div>
+                <div class="text-xs font-black text-[#4A5568] mb-1">👥 參賽模式 / 人數</div>
+                <div class="grid grid-cols-4 gap-1.5" id="player-count-group">
+                  <button onclick="setPlayerCount(1)" data-count="1" class="seg-btn active py-1.5 rounded-xl text-xs font-black bg-white text-[#4A5568] cursor-pointer">單人</button>
+                  <button onclick="setPlayerCount(2)" data-count="2" class="seg-btn py-1.5 rounded-xl text-xs font-black bg-white text-[#4A5568] cursor-pointer">2人賽</button>
+                  <button onclick="setPlayerCount(3)" data-count="3" class="seg-btn py-1.5 rounded-xl text-xs font-black bg-white text-[#4A5568] cursor-pointer">3人賽</button>
+                  <button onclick="setPlayerCount(4)" data-count="4" class="seg-btn py-1.5 rounded-xl text-xs font-black bg-white text-[#4A5568] cursor-pointer">4人賽</button>
+                </div>
+              </div>
+
+              <!-- Track Length & Timer -->
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <div class="text-xs font-black text-[#4A5568] mb-1">🏁 賽道題數</div>
+                  <div class="grid grid-cols-3 gap-1" id="track-len-group">
+                    <button onclick="setTrackLength(3)" data-len="3" class="seg-btn py-1 rounded-lg text-xs font-black bg-white text-[#4A5568] cursor-pointer">3題</button>
+                    <button onclick="setTrackLength(5)" data-len="5" class="seg-btn active py-1 rounded-lg text-xs font-black bg-white text-[#4A5568] cursor-pointer">5題</button>
+                    <button onclick="setTrackLength(8)" data-len="8" class="seg-btn py-1 rounded-lg text-xs font-black bg-white text-[#4A5568] cursor-pointer">8題</button>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-xs font-black text-[#4A5568] mb-1">⏱️ 每題限時</div>
+                  <select
+                    id="timer-select"
+                    onchange="setQuestionTimeLimit(this.value)"
+                    class="w-full bg-white border-2 border-[#CBD5E0] rounded-xl px-2 py-1 text-xs font-black text-[#4A5568] focus:outline-none focus:border-[#7CD4B8] cursor-pointer"
+                  >
+                    <option value="0" selected>無限制</option>
+                    <option value="8">8 秒衝刺</option>
+                    <option value="12">12 秒標準</option>
+                    <option value="15">15 秒思考</option>
+                    <option value="20">20 秒充裕</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column (5 cols): Player Avatar Selection & Start Button -->
+        <div class="lg:col-span-5 setup-card p-4 sm:p-5 flex flex-col justify-between gap-3">
+          <div>
+            <div class="flex items-center justify-between mb-2.5">
+              <h2 class="text-base sm:text-lg font-black text-[#4A5568] flex items-center gap-2">
+                <span class="bg-[#89CFF0] text-white w-7 h-7 rounded-full inline-flex items-center justify-center text-sm">2</span>
+                設定小火車車長與卡通頭像
+              </h2>
+              <span id="setup-player-badge" class="bg-[#FFE699] text-[#8A5A00] text-xs font-black px-2.5 py-1 rounded-full">
+                單人練習模式
+              </span>
+            </div>
+
+            <!-- Player Slots Container -->
+            <div id="player-setup-slots" class="flex flex-col gap-2.5 max-h-[365px] overflow-y-auto pr-1">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Launch Game CTA Button -->
+          <button
+            onclick="startClassroomRace()"
+            class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#FF85A1] via-[#FF9EB5] to-[#FFB84D] hover:from-[#F47C94] hover:to-[#FFA726] text-white font-black text-lg sm:text-xl border-4 border-white shadow-xl transition transform hover:-translate-y-0.5 active:translate-y-0.5 flex items-center justify-center gap-2.5 cursor-pointer"
+          >
+            <span class="text-2xl">🚀</span>
+            <span>鳴笛出發！開始課堂賽</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- VIEW 2: 課堂賽對戰與小火車脫式計算主畫面 (GAMEPLAY VIEW)            -->
+    <!-- =================================================================== -->
+    <section id="view-game" class="hidden relative z-20 flex-1 flex flex-col px-4 sm:px-7 pt-2.5 pb-2 overflow-hidden">
+      <!-- Top Bar: Back to Setup, Topic Badge, Timer, Mode Quick Switch -->
+      <header class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+        <div class="flex items-center gap-2">
+          <button
+            onclick="returnToSetup()"
+            class="bg-[#FFFDF7] hover:bg-[#FFF0F4] border-3 border-[#FFB5C2] text-[#D95374] font-black text-xs sm:text-sm px-3.5 py-1.5 rounded-full shadow flex items-center gap-1.5 cursor-pointer transition"
+          >
+            <span>⬅️</span>
+            <span>創建課堂賽</span>
+          </button>
+
+          <div id="active-topic-tag" class="bg-[#FFE699] border-2 border-white text-[#8A5A00] font-black text-xs sm:text-sm px-3.5 py-1.5 rounded-full shadow-sm">
+            除加混合計算(含括號)
+          </div>
+
+          <div id="question-progress-tag" class="bg-[#FFFDF7] border-2 border-[#B5D8FF] text-[#2B6CB0] font-black text-xs sm:text-sm px-3 py-1.5 rounded-full shadow-sm">
+            第 1 / 5 題
+          </div>
+        </div>
+
+        <!-- Countdown Timer Bar (Visible if timeLimit > 0) -->
+        <div id="timer-bar-wrapper" class="hidden flex-1 max-w-xs mx-2 bg-white/90 border-2 border-[#FFB5C2] rounded-full p-1 shadow-inner flex items-center gap-2">
+          <span class="text-sm pl-1">⏱️</span>
+          <div class="flex-1 h-3 bg-[#EDF2F7] rounded-full overflow-hidden">
+            <div id="timer-fill" class="h-full bg-gradient-to-r from-[#68D391] via-[#F6E05E] to-[#FC8181] transition-all duration-200" style="width: 100%"></div>
+          </div>
+          <span id="timer-text" class="text-xs font-black text-[#D95374] pr-1.5 w-9 text-right">12s</span>
+        </div>
+
+        <!-- Right Quick Controls -->
+        <div class="flex items-center gap-2">
+          <button
+            id="game-mode-toggle"
+            onclick="toggleInGamePracticeMode()"
+            class="bg-[#FFFDF7] hover:bg-[#F3EEFF] border-2 border-[#D8C2FF] text-[#6B46C1] font-extrabold text-xs px-3 py-1.5 rounded-full shadow flex items-center gap-1 cursor-pointer"
+          >
+            <span id="game-mode-icon">🧮</span>
+            <span id="game-mode-text">順序＋計算</span>
+          </button>
+
+          <button
+            onclick="resetCurrentStep()"
+            class="bg-[#FFFDF7] hover:bg-[#E8F8F5] border-2 border-[#A8E6CF] text-[#238A74] font-extrabold text-xs px-3 py-1.5 rounded-full shadow flex items-center gap-1 cursor-pointer"
+          >
+            <span>🔄</span>
+            <span class="hidden sm:inline">重做本題</span>
+          </button>
+
+          <button
+            id="game-sound-btn"
+            onclick="toggleSound()"
+            class="w-9 h-9 rounded-full bg-[#FFFDF7] border-2 border-[#FFB5C2] text-[#E05275] shadow flex items-center justify-center text-base cursor-pointer"
+          >
+            🎵
+          </button>
+        </div>
+      </header>
+
+      <!-- Multi-Player Train Race Tracks Banner (Compact top track overview) -->
+      <div id="race-tracks-panel" class="bg-[#FFFDF7]/85 backdrop-blur-sm border-3 border-white rounded-2xl px-4 py-2 mb-2 shadow-md">
+        <div id="race-tracks-list" class="flex flex-col gap-1.5">
+          <!-- Player mini tracks rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Center: Framed Blackboard with Multi-Level Step-by-Step Vertical Calculation -->
+      <div class="w-full max-w-4xl mx-auto">
+        <div class="chalkboard-frame px-5 py-2.5 sm:px-8 sm:py-3 min-h-[158px] sm:min-h-[175px] flex flex-col justify-between">
+          <div class="flex items-center justify-between text-xs text-[#B8E6D0] font-bold">
+            <span id="active-player-turn-badge" class="bg-[#FFE680] text-[#5A3E00] px-3 py-0.5 rounded-full font-black flex items-center gap-1.5 shadow-sm">
+              <!-- Active Driver Avatar + Name -->
+            </span>
+            <span id="rule-hint-chip" class="bg-[#1F3A30] border border-[#5B8E7A] text-[#FFE680] px-3 py-0.5 rounded-full">
+              口訣：大括號 → 中括號 → 小括號 → 先乘除後加減
+            </span>
+          </div>
+
+          <!-- Dynamic Multi-Step Vertical Calculation (脫式計算) -->
+          <div id="chalkboard-content" class="my-auto py-1 flex flex-col items-center justify-center chalk-text font-black">
+            <!-- Populated by JS -->
+          </div>
+
+          <div class="flex justify-between items-center text-[11px] text-[#A8E6CF]/80 font-bold">
+            <span>💡 提示：點擊下方小火車中「最先計算」的運算符號按鈕</span>
+            <div class="flex items-center gap-1.5">
+              <span class="w-7 h-1.5 bg-[#FFFDF7] rounded-full"></span>
+              <span class="w-5 h-1.5 bg-[#FFB5C2] rounded-full"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom: Interactive Train Carriages & Operators on Main Track -->
+      <div class="relative flex-1 flex flex-col justify-end pb-9 sm:pb-11">
+        <div id="train-container" class="train-wrapper flex items-end justify-center gap-1 sm:gap-2 px-2 overflow-x-auto sm:overflow-visible">
+          <!-- Locomotive with Active Player Avatar -->
+          <div id="locomotive-box" class="shrink-0 train-chug relative">
+            <div id="loco-driver-avatar" class="absolute top-3 left-[84px] w-11 h-11 rounded-full bg-white border-2 border-[#3B6982] overflow-hidden shadow-sm z-10 flex items-center justify-center">
+              <!-- Active character SVG injected here -->
+            </div>
+            <svg width="142" height="116" viewBox="0 0 175 145" class="drop-shadow-md">
+              <circle class="steam-puff" cx="44" cy="24" r="10" fill="#FFFFFF" opacity="0.8" />
+              <rect x="34" y="28" width="20" height="28" rx="4" fill="#FF85A1" stroke="#7A3E4D" stroke-width="3" />
+              <rect x="30" y="24" width="28" height="8" rx="4" fill="#FFE680" stroke="#7A3E4D" stroke-width="3" />
+              <rect x="24" y="54" width="76" height="48" rx="14" fill="#FF9EB5" stroke="#7A3E4D" stroke-width="3" />
+              <rect x="44" y="54" width="7" height="48" fill="#FFE680" />
+              <rect x="72" y="54" width="7" height="48" fill="#FFE680" />
+              <polygon points="8,108 26,84 26,108" fill="#7CD4B8" stroke="#366E5D" stroke-width="3" stroke-linejoin="round" />
+              <circle cx="22" cy="74" r="8" fill="#FFF7CC" stroke="#7A3E4D" stroke-width="2.5" />
+              <rect x="92" y="34" width="64" height="68" rx="10" fill="#89CFF0" stroke="#3B6982" stroke-width="3" />
+              <path d="M86,36 Q124,20 162,36 Z" fill="#FFE680" stroke="#7A5E1A" stroke-width="3" stroke-linejoin="round" />
+              <rect x="20" y="98" width="140" height="14" rx="7" fill="#5D6D7E" stroke="#2C3E50" stroke-width="3" />
+              <rect x="158" y="101" width="14" height="8" rx="4" fill="#7D8B99" stroke="#2C3E50" stroke-width="2.5" />
+              <g class="train-wheel">
+                <circle cx="46" cy="118" r="15" fill="#FFE680" stroke="#7A5E1A" stroke-width="3.5" />
+                <circle cx="46" cy="118" r="5" fill="#FF85A1" />
+              </g>
+              <g class="train-wheel">
+                <circle cx="84" cy="118" r="15" fill="#FFE680" stroke="#7A5E1A" stroke-width="3.5" />
+                <circle cx="84" cy="118" r="5" fill="#FF85A1" />
+              </g>
+              <g class="train-wheel">
+                <circle cx="132" cy="116" r="18" fill="#FF9EB5" stroke="#7A3E4D" stroke-width="3.5" />
+                <circle cx="132" cy="116" r="6" fill="#FFE680" />
+              </g>
+            </svg>
+          </div>
+
+          <!-- Dynamic Train Carriages & Operators Area -->
+          <div id="train-carriages-area" class="flex items-end gap-1.5 sm:gap-2">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Prompt Banner -->
+        <div class="relative z-20 mt-2.5 flex justify-center">
+          <div
+            id="prompt-banner"
+            class="bg-[#FFFDF7] border-4 border-[#FFE699] rounded-full px-5 py-1.5 shadow-lg flex items-center gap-2 text-center transition-all"
+          >
+            <span id="prompt-emoji" class="text-xl sm:text-2xl">👆</span>
+            <span id="prompt-text" class="text-sm sm:text-base font-black text-[#4A5568]">
+              先算哪一步？請點擊要先計算的運算符號按鈕！
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- VIEW 3: 頒獎台結算畫面 (PODIUM / RESULTS VIEW)                      -->
+    <!-- =================================================================== -->
+    <section id="view-podium" class="hidden relative z-30 flex-1 flex flex-col items-center justify-between px-6 py-5 overflow-y-auto">
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 bg-[#FFE680] border-4 border-white text-[#8A5A00] font-black text-xl sm:text-2xl px-6 py-2 rounded-full shadow-lg mb-1">
+          <span>🏆</span>
+          <span>課堂賽榮譽頒獎台</span>
+          <span>🎉</span>
+        </div>
+        <p class="text-sm font-extrabold text-[#4A5568]">每一位小車長都完成了運算順序大挑戰！</p>
+      </div>
+
+      <!-- Podium Stage Cards -->
+      <div id="podium-cards-container" class="w-full max-w-4xl flex flex-wrap items-end justify-center gap-4 my-3">
+        <!-- Populated by JS -->
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-wrap items-center justify-center gap-4 pb-2">
+        <button
+          onclick="startClassroomRace()"
+          class="bg-gradient-to-r from-[#68D391] to-[#38B2AC] hover:from-[#48BB78] hover:to-[#319795] text-white font-black text-base sm:text-lg px-7 py-3 rounded-full border-4 border-white shadow-xl cursor-pointer transition transform hover:-translate-y-0.5 flex items-center gap-2"
+        >
+          <span>🔄</span>
+          <span>再賽一局</span>
+        </button>
+
+        <button
+          onclick="returnToSetup()"
+          class="bg-gradient-to-r from-[#FF85A1] to-[#FFB84D] hover:from-[#F47C94] hover:to-[#FFA726] text-white font-black text-base sm:text-lg px-7 py-3 rounded-full border-4 border-white shadow-xl cursor-pointer transition transform hover:-translate-y-0.5 flex items-center gap-2"
+        >
+          <span>⚙️</span>
+          <span>返回創建課堂賽設定</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- FLOATING MACARON KEYPAD MODAL                                       -->
+    <!-- =================================================================== -->
+    <div
+      id="keypad-overlay"
+      class="hidden fixed inset-0 z-40 bg-slate-900/35 backdrop-blur-[2px] flex items-center justify-center p-4"
+    >
+      <div class="bg-[#FFFDF7] border-4 border-[#FFB5C2] rounded-3xl p-5 w-full max-w-xs shadow-2xl pop-merge">
+        <div class="text-center mb-3">
+          <span class="inline-block bg-[#FFE699] text-[#8A5A00] text-xs font-extrabold px-3 py-1 rounded-full mb-1">
+            ✨ 選對順序啦！算算看這一步等於多少？
+          </span>
+          <div id="keypad-equation" class="text-3xl font-black text-[#D95374] tracking-wider my-1">
+            36 ÷ 4 = ?
+          </div>
+        </div>
+
+        <div class="bg-[#F2F9FF] border-3 border-[#B5D8FF] rounded-2xl py-2 px-4 mb-3 text-center">
+          <span id="keypad-input-display" class="text-3xl font-black text-[#2B6CB0] tracking-widest">
+            _
+          </span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 mb-2.5">
+          <button onclick="pressKey('1')" class="num-key bg-[#EBF8FF] hover:bg-[#BEE3F8] text-[#2B6CB0] font-black text-xl py-2.5 rounded-2xl cursor-pointer">1</button>
+          <button onclick="pressKey('2')" class="num-key bg-[#EBF8FF] hover:bg-[#BEE3F8] text-[#2B6CB0] font-black text-xl py-2.5 rounded-2xl cursor-pointer">2</button>
+          <button onclick="pressKey('3')" class="num-key bg-[#EBF8FF] hover:bg-[#BEE3F8] text-[#2B6CB0] font-black text-xl py-2.5 rounded-2xl cursor-pointer">3</button>
+          <button onclick="pressKey('4')" class="num-key bg-[#EBF8FF] hover:bg-[#BEE3F8] text-[#2B6CB0] font-black text-xl py-2.5 rounded-2xl cursor-pointer">4</button>
+          <button onclick="pressKey('5')" class="num-key bg-[#EBF8FF] hover:bg-[#BEE3F8] text-[#2B6CB0] font-black text-xl py-2.5 rounded-2xl cursor-pointer">5</button>
+          <button onclick="pressKey('6')" class="num-key bg-[#EBF8FF] hover:bg-[#BEE3F8] text-[#2B6CB0] font-black text-xl py-2.5 rounded-2xl cursor-pointer">6</button>
+          <button onclick="pressKey('7')" class="num-key bg-[#EBF8FF] hover:bg-[#BEE3F8] text-[#2B6CB0] font-black text-xl py-2.5 rounded-2xl cursor-pointer">7</button>
+          <button onclick="pressKey('8')" class="num-key bg-[#EBF8FF] hover:bg-[#BEE3F8] text-[#2B6CB0] font-black text-xl py-2.5 rounded-2xl cursor-pointer">8</button>
+          <button onclick="pressKey('9')" class="num-key bg-[#EBF8FF] hover:bg-[#BEE3F8] text-[#2B6CB0] font-black text-xl py-2.5 rounded-2xl cursor-pointer">9</button>
+          <button onclick="clearKey()" class="num-key bg-[#FFEBEB] hover:bg-[#FED7D7] text-[#C53030] font-black text-base py-2.5 rounded-2xl cursor-pointer">清除</button>
+          <button onclick="pressKey('0')" class="num-key bg-[#EBF8FF] hover:bg-[#BEE3F8] text-[#2B6CB0] font-black text-xl py-2.5 rounded-2xl cursor-pointer">0</button>
+          <button onclick="submitKeyAnswer()" class="num-key bg-gradient-to-r from-[#68D391] to-[#38B2AC] text-white font-black text-base py-2.5 rounded-2xl cursor-pointer">確定 ✓</button>
+        </div>
+
+        <p id="keypad-feedback" class="text-center text-xs font-bold text-[#E53E3E] min-h-[18px]"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+     * 1. 可愛卡通頭像庫（自製精緻 SVG 頭像：多啦A夢、屁屁偵探、蠟筆小新、星星人、櫻桃小丸子、Chiikawa）
+     * ========================================================================= */
+    const CHARACTERS = [
+      {
+        id: 'doraemon',
+        name: '多啦A夢',
+        ringColor: '#5B9BD5',
+        bgColor: '#EBF8FF',
+        svg: `
+          <svg viewBox="0 0 80 80" class="w-full h-full">
+            <circle cx="40" cy="40" r="38" fill="#5B9BD5"/>
+            <circle cx="40" cy="44" r="30" fill="#FFFFFF"/>
+            <ellipse cx="33" cy="24" rx="7" ry="9" fill="#FFFFFF" stroke="#2D3748" stroke-width="2"/>
+            <ellipse cx="47" cy="24" rx="7" ry="9" fill="#FFFFFF" stroke="#2D3748" stroke-width="2"/>
+            <circle cx="35" cy="25" r="2.5" fill="#2D3748"/>
+            <circle cx="45" cy="25" r="2.5" fill="#2D3748"/>
+            <circle cx="40" cy="34" r="5" fill="#E53E3E"/>
+            <circle cx="38.5" cy="32.5" r="1.5" fill="#FFFFFF"/>
+            <line x1="40" y1="39" x2="40" y2="54" stroke="#2D3748" stroke-width="2"/>
+            <path d="M23,48 Q40,63 57,48" fill="none" stroke="#2D3748" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="16" y1="36" x2="29" y2="39" stroke="#2D3748" stroke-width="1.8"/>
+            <line x1="15" y1="43" x2="29" y2="43" stroke="#2D3748" stroke-width="1.8"/>
+            <line x1="51" y1="39" x2="64" y2="36" stroke="#2D3748" stroke-width="1.8"/>
+            <line x1="51" y1="43" x2="65" y2="43" stroke="#2D3748" stroke-width="1.8"/>
+            <rect x="24" y="65" width="32" height="5" rx="2.5" fill="#E53E3E"/>
+            <circle cx="40" cy="68" r="4" fill="#F6E05E" stroke="#B7791F" stroke-width="1"/>
+          </svg>`
+      },
+      {
+        id: 'butt_detective',
+        name: '屁屁偵探',
+        ringColor: '#D69E2E',
+        bgColor: '#FEFCBF',
+        svg: `
+          <svg viewBox="0 0 80 80" class="w-full h-full">
+            <circle cx="40" cy="40" r="38" fill="#FAF089"/>
+            <!-- Beret Hat -->
+            <ellipse cx="42" cy="18" rx="22" ry="8" fill="#4A5568" transform="rotate(-8 42 18)"/>
+            <!-- Cheeky Twin Cheeks Face -->
+            <path d="M22,26 Q14,45 24,60 Q36,66 40,56 Q44,66 56,60 Q66,45 58,26 Z" fill="#FBD38D" stroke="#B7791F" stroke-width="2"/>
+            <line x1="40" y1="36" x2="40" y2="56" stroke="#B7791F" stroke-width="2"/>
+            <!-- Eyes & Eyebrows -->
+            <path d="M25,31 Q30,28 35,31" fill="none" stroke="#2D3748" stroke-width="2.5" stroke-linecap="round"/>
+            <path d="M45,31 Q50,28 55,31" fill="none" stroke="#2D3748" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="30" cy="36" r="2.8" fill="#2D3748"/>
+            <circle cx="50" cy="36" r="2.8" fill="#2D3748"/>
+            <!-- Cute Bowtie -->
+            <polygon points="31,66 40,70 31,74" fill="#E53E3E"/>
+            <polygon points="49,66 40,70 49,74" fill="#E53E3E"/>
+            <circle cx="40" cy="70" r="2.5" fill="#F6E05E"/>
+          </svg>`
+      },
+      {
+        id: 'shinchan',
+        name: '蠟筆小新',
+        ringColor: '#F56565',
+        bgColor: '#FFF5F5',
+        svg: `
+          <svg viewBox="0 0 80 80" class="w-full h-full">
+            <circle cx="40" cy="40" r="38" fill="#FEB2B2"/>
+            <!-- Potato Head -->
+            <path d="M23,28 Q22,18 40,18 Q58,18 57,28 Q64,34 62,46 Q60,60 42,60 Q22,60 21,45 Q17,35 23,28 Z" fill="#FBD38D" stroke="#9C4221" stroke-width="2"/>
+            <!-- Buzz Hair -->
+            <path d="M23,28 Q26,16 40,16 Q54,16 57,28 Q48,22 40,22 Q32,22 23,28 Z" fill="#1A202C"/>
+            <!-- Thick Iconic Eyebrows -->
+            <path d="M26,31 Q32,25 38,31" fill="none" stroke="#1A202C" stroke-width="4.5" stroke-linecap="round"/>
+            <path d="M43,31 Q49,25 55,31" fill="none" stroke="#1A202C" stroke-width="4.5" stroke-linecap="round"/>
+            <!-- Big Eyes -->
+            <circle cx="32" cy="38" r="4.5" fill="#1A202C"/>
+            <circle cx="33.5" cy="36.5" r="1.5" fill="#FFFFFF"/>
+            <circle cx="49" cy="38" r="4.5" fill="#1A202C"/>
+            <circle cx="50.5" cy="36.5" r="1.5" fill="#FFFFFF"/>
+            <!-- Rosy Cheek & Smile -->
+            <circle cx="56" cy="48" r="4.5" fill="#FC8181" opacity="0.7"/>
+            <ellipse cx="38" cy="52" rx="4" ry="3" fill="#E53E3E"/>
+          </svg>`
+      },
+      {
+        id: 'star_boy',
+        name: '星星人',
+        ringColor: '#ECC94B',
+        bgColor: '#FFFFF0',
+        svg: `
+          <svg viewBox="0 0 80 80" class="w-full h-full">
+            <circle cx="40" cy="40" r="38" fill="#BEE3F8"/>
+            <!-- 5-Point Star Body -->
+            <polygon points="40,10 49,29 70,32 54,46 58,67 40,57 22,67 26,46 10,32 31,29" fill="#F6E05E" stroke="#D69E2E" stroke-width="2.5" stroke-linejoin="round"/>
+            <!-- Cute Eyes & Blush -->
+            <circle cx="34" cy="41" r="2.8" fill="#2D3748"/>
+            <circle cx="46" cy="41" r="2.8" fill="#2D3748"/>
+            <circle cx="29" cy="45" r="3" fill="#FBB6CE"/>
+            <circle cx="51" cy="45" r="3" fill="#FBB6CE"/>
+            <path d="M36,46 Q40,50 44,46" fill="none" stroke="#2D3748" stroke-width="2" stroke-linecap="round"/>
+          </svg>`
+      },
+      {
+        id: 'maruko',
+        name: '櫻桃小丸子',
+        ringColor: '#ED64A6',
+        bgColor: '#FFF5F7',
+        svg: `
+          <svg viewBox="0 0 80 80" class="w-full h-full">
+            <circle cx="40" cy="40" r="38" fill="#FBB6CE"/>
+            <!-- Bob Haircut -->
+            <path d="M18,52 Q16,16 40,16 Q64,16 62,52 Z" fill="#1A202C"/>
+            <!-- Face -->
+            <circle cx="40" cy="43" r="18" fill="#FBD38D"/>
+            <!-- Zigzag Bangs -->
+            <polygon points="22,34 26,26 30,34 34,26 38,34 42,26 46,34 50,26 54,34 58,28 56,22 24,22" fill="#1A202C"/>
+            <!-- Eyes & Rosy Cheeks -->
+            <circle cx="33" cy="42" r="2.5" fill="#1A202C"/>
+            <circle cx="47" cy="42" r="2.5" fill="#1A202C"/>
+            <circle cx="28" cy="47" r="4" fill="#F687B3" opacity="0.75"/>
+            <circle cx="52" cy="47" r="4" fill="#F687B3" opacity="0.75"/>
+            <path d="M35,50 Q40,55 45,50" fill="none" stroke="#E53E3E" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>`
+      },
+      {
+        id: 'chiikawa',
+        name: 'Chiikawa',
+        ringColor: '#9F7AEA',
+        bgColor: '#FAF5FF',
+        svg: `
+          <svg viewBox="0 0 80 80" class="w-full h-full">
+            <circle cx="40" cy="40" r="38" fill="#E9D8FD"/>
+            <!-- Round Bear/Hamster Ears -->
+            <circle cx="24" cy="23" r="8" fill="#FFFFFF" stroke="#4A5568" stroke-width="2.2"/>
+            <circle cx="56" cy="23" r="8" fill="#FFFFFF" stroke="#4A5568" stroke-width="2.2"/>
+            <!-- Fluffy White Head -->
+            <ellipse cx="40" cy="45" rx="24" ry="21" fill="#FFFFFF" stroke="#4A5568" stroke-width="2.2"/>
+            <!-- Sparkly Eyes -->
+            <circle cx="32" cy="42" r="3.2" fill="#2D3748"/>
+            <circle cx="31" cy="41" r="1.2" fill="#FFFFFF"/>
+            <circle cx="48" cy="42" r="3.2" fill="#2D3748"/>
+            <circle cx="47" cy="41" r="1.2" fill="#FFFFFF"/>
+            <!-- Pink Blush -->
+            <ellipse cx="26" cy="47" rx="4" ry="2.5" fill="#FBB6CE"/>
+            <ellipse cx="54" cy="47" rx="4" ry="2.5" fill="#FBB6CE"/>
+            <!-- Cat-like Smile -->
+            <path d="M36,48 Q38,51 40,48 Q42,51 44,48" fill="none" stroke="#2D3748" stroke-width="2" stroke-linecap="round"/>
+          </svg>`
+      }
+    ];
+
+    /* =========================================================================
+     * 2. 四大混合計算題型與多層括號脫式計算引擎
+     * 支援：
+     *   - div_add: 除加混合計算(含括號)
+     *   - div_sub: 除減混合計算(含括號)
+     *   - mul_div: 乘除混合計算(含括號)
+     *   - four_ops_brackets: 四則混合計算(含大 {}、中 []、小 () 括號)
+     *
+     * 每個題目定義為 AST / Token 結構，可動態逐步化簡最優先的運算！
+     * ========================================================================= */
+    const TOPICS = [
+      {
+        id: 'div_add',
+        title: '除加混合計算(含括號)',
+        example: '例如：36 ÷ 4 + 15、(24 + 12) ÷ 6',
+        badgeColor: 'bg-[#FFE699] text-[#8A5A00]',
+        icon: '➗➕'
+      },
+      {
+        id: 'div_sub',
+        title: '除減混合計算(含括號)',
+        example: '例如：45 ÷ 5 - 3、(50 - 14) ÷ 4',
+        badgeColor: 'bg-[#A8E6CF] text-[#1D6F5B]',
+        icon: '➗➖'
+      },
+      {
+        id: 'mul_div',
+        title: '乘除混合計算(含括號)',
+        example: '例如：24 ÷ 4 × 3、36 ÷ (3 × 2)',
+        badgeColor: 'bg-[#B5D8FF] text-[#2B6CB0]',
+        icon: '✖️➗'
+      },
+      {
+        id: 'four_ops_brackets',
+        title: '四則混合計算(含大、中、小括號)',
+        example: '例如：{ 48 - [ 12 + (16 ÷ 4) ] } × 2',
+        badgeColor: 'bg-[#D8C2FF] text-[#553C9A]',
+        icon: '｛［（）］｝'
+      }
+    ];
+
+    /**
+     * 題庫產生器（每道題目由「數字節點」與「運算子節點」交錯組成，並附帶括號層級 bracketOpen / bracketClose）
+     * 這樣的資料結構可支援任意長度的脫式計算（2步或3步化簡），且每一步都能精準判斷哪一個運算子最優先！
+     */
+    const QUESTION_BANK = [
+      // --- 1. 除加混合計算(含括號) ---
+      {
+        topic: 'div_add',
+        ruleText: '口訣：沒有括號時，先除後加',
+        tokens: [
+          { type: 'num', val: 36 },
+          { type: 'op', val: '÷', priority: 2, hint: '沒有括號時，除法比加法優先，先算 36 ÷ 4！' },
+          { type: 'num', val: 4 },
+          { type: 'op', val: '+', priority: 1, hint: '先算完除法之後，再算加法喔！' },
+          { type: 'num', val: 15 }
+        ]
+      },
+      {
+        topic: 'div_add',
+        ruleText: '口訣：沒有括號時，先除後加',
+        tokens: [
+          { type: 'num', val: 18 },
+          { type: 'op', val: '+', priority: 1, hint: '小心！雖然加法在前面，但沒有括號要先算後面的除法喔！' },
+          { type: 'num', val: 24 },
+          { type: 'op', val: '÷', priority: 2, hint: '答對了！先除後加，先算 24 ÷ 6！' },
+          { type: 'num', val: 6 }
+        ]
+      },
+      {
+        topic: 'div_add',
+        ruleText: '口訣：有小括號，先算括號裡面',
+        tokens: [
+          { type: 'num', val: 24, open: ['('] },
+          { type: 'op', val: '+', priority: 3, hint: '真棒！小括號最優先，先算 (24 + 12)！' },
+          { type: 'num', val: 12, close: [')'] },
+          { type: 'op', val: '÷', priority: 2, hint: '有小括號幫忙囉！要先算括號裡面的加法！' },
+          { type: 'num', val: 6 }
+        ]
+      },
+      {
+        topic: 'div_add',
+        ruleText: '口訣：有小括號，先算括號裡面',
+        tokens: [
+          { type: 'num', val: 45 },
+          { type: 'op', val: '÷', priority: 2, hint: '看看小括號在哪裡？要先算括號裡面的 (5 + 4)！' },
+          { type: 'num', val: 5, open: ['('] },
+          { type: 'op', val: '+', priority: 3, hint: '太厲害了！括號優先，先算 5 + 4！' },
+          { type: 'num', val: 4, close: [')'] }
+        ]
+      },
+
+      // --- 2. 除減混合計算(含括號) ---
+      {
+        topic: 'div_sub',
+        ruleText: '口訣：沒有括號時，先除後減',
+        tokens: [
+          { type: 'num', val: 45 },
+          { type: 'op', val: '÷', priority: 2, hint: '正確！沒有括號時，先算除法 45 ÷ 5！' },
+          { type: 'num', val: 5 },
+          { type: 'op', val: '-', priority: 1, hint: '除法和減法在一起，沒有括號時要「先除後減」喔！' },
+          { type: 'num', val: 3 }
+        ]
+      },
+      {
+        topic: 'div_sub',
+        ruleText: '口訣：沒有括號時，先除後減',
+        tokens: [
+          { type: 'num', val: 30 },
+          { type: 'op', val: '-', priority: 1, hint: '別被位置騙了！沒有括號時要先算後面的除法 32 ÷ 8！' },
+          { type: 'num', val: 32 },
+          { type: 'op', val: '÷', priority: 2, hint: '好聰明！先除後減，先算 32 ÷ 8！' },
+          { type: 'num', val: 8 }
+        ]
+      },
+      {
+        topic: 'div_sub',
+        ruleText: '口訣：有小括號，先算括號裡面',
+        tokens: [
+          { type: 'num', val: 50, open: ['('] },
+          { type: 'op', val: '-', priority: 3, hint: '完全正確！小括號優先，先算 (50 - 14)！' },
+          { type: 'num', val: 14, close: [')'] },
+          { type: 'op', val: '÷', priority: 2, hint: '括號裡面的減法要最先算喔，再試一次！' },
+          { type: 'num', val: 4 }
+        ]
+      },
+      {
+        topic: 'div_sub',
+        ruleText: '口訣：有小括號，先算括號裡面',
+        tokens: [
+          { type: 'num', val: 48 },
+          { type: 'op', val: '÷', priority: 2, hint: '小括號在後面喔！括號裡面的 (15 - 7) 要先算！' },
+          { type: 'num', val: 15, open: ['('] },
+          { type: 'op', val: '-', priority: 3, hint: '太棒了！先算小括號裡的 15 - 7！' },
+          { type: 'num', val: 7, close: [')'] }
+        ]
+      },
+
+      // --- 3. 乘除混合計算(含括號) ---
+      {
+        topic: 'mul_div',
+        ruleText: '口訣：只有乘除無括號，由左到右依序算',
+        tokens: [
+          { type: 'num', val: 24 },
+          { type: 'op', val: '÷', priority: 2.5, hint: '答對了！乘除是同級運算，沒有括號時由左到右先算 24 ÷ 4！' },
+          { type: 'num', val: 4 },
+          { type: 'op', val: '×', priority: 2.0, hint: '乘法和除法屬於同級運算，沒有括號時要「從左到右」依序計算喔！' },
+          { type: 'num', val: 3 }
+        ]
+      },
+      {
+        topic: 'mul_div',
+        ruleText: '口訣：只有乘除無括號，由左到右依序算',
+        tokens: [
+          { type: 'num', val: 6 },
+          { type: 'op', val: '×', priority: 2.5, hint: '真棒！沒有括號時，乘除由左往右先算 6 × 4！' },
+          { type: 'num', val: 4 },
+          { type: 'op', val: '÷', priority: 2.0, hint: '乘除同級無括號，應該從最左邊開始算起喔！' },
+          { type: 'num', val: 8 }
+        ]
+      },
+      {
+        topic: 'mul_div',
+        ruleText: '口訣：有小括號，先算括號裡面',
+        tokens: [
+          { type: 'num', val: 36 },
+          { type: 'op', val: '÷', priority: 2, hint: '有小括號改變順序囉！要先算括號裡面的 (3 × 2)！' },
+          { type: 'num', val: 3, open: ['('] },
+          { type: 'op', val: '×', priority: 3, hint: '太聰明了！小括號最優先，先算 (3 × 2)！' },
+          { type: 'num', val: 2, close: [')'] }
+        ]
+      },
+      {
+        topic: 'mul_div',
+        ruleText: '口訣：有小括號，先算括號裡面',
+        tokens: [
+          { type: 'num', val: 48 },
+          { type: 'op', val: '÷', priority: 2, hint: '小括號在後面喔！要先算 (24 ÷ 4)！' },
+          { type: 'num', val: 24, open: ['('] },
+          { type: 'op', val: '÷', priority: 3, hint: '完全正確！括號優先，先算 (24 ÷ 4)！' },
+          { type: 'num', val: 4, close: [')'] }
+        ]
+      },
+
+      // --- 4. 四則混合計算(含大、中、小括號) ---
+      {
+        topic: 'four_ops_brackets',
+        ruleText: '口訣：先算小括號 ( ) → 再算中括號 [ ] → 最後括號外',
+        tokens: [
+          { type: 'num', val: 72 },
+          { type: 'op', val: '÷', priority: 2, hint: '括號優先！裡面有中括號 [ ] 和小括號 ( )，要先算最裡面的小括號喔！' },
+          { type: 'num', val: 18, open: ['[', '('] },
+          { type: 'op', val: '-', priority: 4, hint: '太厲害了！最內層的小括號 (18 - 12) 最優先計算！' },
+          { type: 'num', val: 12, close: [')'] },
+          { type: 'op', val: '×', priority: 3, hint: '小括號 (18 - 12) 在中括號裡面，要先算小括號喔！' },
+          { type: 'num', val: 2, close: [']'] }
+        ]
+      },
+      {
+        topic: 'four_ops_brackets',
+        ruleText: '口訣：先算小括號 ( ) → 再算中括號 [ ] → 最後括號外',
+        tokens: [
+          { type: 'num', val: 5, open: ['['] },
+          { type: 'op', val: '×', priority: 3, hint: '中括號裡面還有一個小括號 (4 + 2)，要先算最裡面的小括號喔！' },
+          { type: 'num', val: 4, open: ['('] },
+          { type: 'op', val: '+', priority: 4, hint: '完全正確！最內層小括號 (4 + 2) 最先算！' },
+          { type: 'num', val: 2, close: [')', ']'] },
+          { type: 'op', val: '÷', priority: 2, hint: '括號最優先！請點擊最內層小括號裡的運算符號！' },
+          { type: 'num', val: 6 }
+        ]
+      },
+      {
+        topic: 'four_ops_brackets',
+        ruleText: '口訣：大括號 { } → 中括號 [ ] → 小括號 ( ) 由內向外算！',
+        tokens: [
+          { type: 'num', val: 48, open: ['{'] },
+          { type: 'op', val: '-', priority: 3, hint: '大括號裡面還有中括號和小括號，要從最裡面的小括號 (16 ÷ 4) 開始算喔！' },
+          { type: 'num', val: 12, open: ['['] },
+          { type: 'op', val: '+', priority: 4, hint: '中括號裡面還有更內層的小括號 (16 ÷ 4)，先算小括號！' },
+          { type: 'num', val: 16, open: ['('] },
+          { type: 'op', val: '÷', priority: 5, hint: '神準！層層剝開，最內層的小括號 (16 ÷ 4) 最優先！' },
+          { type: 'num', val: 4, close: [')', ']', '}'] },
+          { type: 'op', val: '×', priority: 2, hint: '括號最優先！請找出最內層小括號裡的運算符號！' },
+          { type: 'num', val: 2 }
+        ]
+      },
+      {
+        topic: 'four_ops_brackets',
+        ruleText: '口訣：大括號 { } → 中括號 [ ] → 小括號 ( ) 由內向外算！',
+        tokens: [
+          { type: 'num', val: 100 },
+          { type: 'op', val: '÷', priority: 2, hint: '請先找到最內層的小括號 (20 - 15) 開始計算喔！' },
+          { type: 'num', val: 2, open: ['{'] },
+          { type: 'op', val: '×', priority: 3, hint: '大括號裡面還有中括號和小括號，先算最裡面的小括號 (20 - 15)！' },
+          { type: 'num', val: 5, open: ['['] },
+          { type: 'op', val: '+', priority: 4, hint: '中括號裡面還有小括號 (20 - 15)，先算小括號！' },
+          { type: 'num', val: 20, open: ['('] },
+          { type: 'op', val: '-', priority: 5, hint: '太棒了！最內層小括號 (20 - 15) 最優先計算！' },
+          { type: 'num', val: 15, close: [')', ']', '}'] }
+        ]
+      }
+    ];
+
+    /* =========================================================================
+     * 3. 全域遊戲狀態 (STATE)
+     * ========================================================================= */
+    const PLAYER_DEFAULTS = [
+      { name: '第一組·小火車', charId: 'doraemon', color: '#5B9BD5' },
+      { name: '第二組·偵探隊', charId: 'butt_detective', color: '#D69E2E' },
+      { name: '第三組·動感號', charId: 'shinchan', color: '#F56565' },
+      { name: '第四組·星星號', charId: 'star_boy', color: '#9F7AEA' }
+    ];
+
+    let state = {
+      view: 'setup', // 'setup' | 'game' | 'podium'
+      selectedTopics: new Set(['div_add', 'div_sub', 'mul_div', 'four_ops_brackets']),
+      fullCalculationMode: true,
+      playerCount: 1,
+      trackLength: 5,
+      timeLimit: 0, // 0 = unlimited
+      players: JSON.parse(JSON.stringify(PLAYER_DEFAULTS)),
+
+      // Runtime Race State
+      raceQuestions: [],
+      questionIndex: 0,
+      activePlayerIndex: 0,
+      tokens: [], // Current working tokens of the active expression
+      historyLines: [], // Lines displayed on the blackboard
+      isQuestionSolved: false,
+      soundEnabled: true,
+
+      // Timer
+      timerInterval: null,
+      timeLeft: 0,
+      questionStartTime: 0,
+
+      // Keypad
+      keypadValue: '',
+      pendingOpTokenIndex: null,
+      pendingResultValue: null
+    };
+
+    /* =========================================================================
+     * 4. Web Audio API 清脆音效合成器
+     * ========================================================================= */
+    let audioCtx = null;
+    function getAudioCtx() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function playSound(type) {
+      if (!state.soundEnabled) return;
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      if (type === 'click') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(540, now);
+        osc.frequency.exponentialRampToValueAtTime(720, now + 0.08);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.09);
+      } else if (type === 'wrong') {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(250, now);
+        osc.frequency.exponentialRampToValueAtTime(160, now + 0.26);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.28);
+      } else if (type === 'right') {
+        [523.25, 659.25, 783.99].forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+          gain.gain.setValueAtTime(0.15, now + idx * 0.07);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.26);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.07);
+          osc.stop(now + idx * 0.07 + 0.26);
+        });
+      } else if (type === 'whistle') {
+        [587.33, 783.99, 987.77, 1174.66].forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+          gain.gain.setValueAtTime(0.17, now + idx * 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.42);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.1);
+          osc.stop(now + idx * 0.1 + 0.42);
+        });
+      }
+    }
+
+    function toggleSound() {
+      state.soundEnabled = !state.soundEnabled;
+      const icon = state.soundEnabled ? '🎵' : '🔇';
+      document.getElementById('setup-sound-btn').textContent = icon;
+      document.getElementById('game-sound-btn').textContent = icon;
+      if (state.soundEnabled) playSound('click');
+    }
+
+    /* =========================================================================
+     * 5. 設定頁（創建課堂賽）邏輯
+     * ========================================================================= */
+    function renderTopicCards() {
+      const grid = document.getElementById('topic-grid');
+      grid.innerHTML = TOPICS.map(t => {
+        const isSelected = state.selectedTopics.has(t.id);
+        return `
+          <div
+            onclick="toggleTopic('${t.id}')"
+            class="topic-chip rounded-2xl p-3 cursor-pointer flex flex-col justify-between ${
+              isSelected ? 'selected' : 'bg-white hover:bg-[#FFF9FB]'
+            }"
+          >
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="font-black text-sm text-[#2D3748]">${t.title}</span>
+              <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${
+                isSelected ? 'bg-[#FF6B8B] text-white' : 'bg-[#EDF2F7] text-[#A0AEC0]'
+              }">
+                ${isSelected ? '✓' : ''}
+              </span>
+            </div>
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-[11px] font-bold text-[#718096]">${t.example}</span>
+              <span class="text-xs font-black px-2 py-0.5 rounded-full ${t.badgeColor} shrink-0">${t.icon}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleTopic(topicId) {
+      playSound('click');
+      if (state.selectedTopics.has(topicId)) {
+        if (state.selectedTopics.size === 1) return; // 至少保留一個題型
+        state.selectedTopics.delete(topicId);
+      } else {
+        state.selectedTopics.add(topicId);
+      }
+      renderTopicCards();
+    }
+
+    function selectAllTopics() {
+      playSound('click');
+      TOPICS.forEach(t => state.selectedTopics.add(t.id));
+      renderTopicCards();
+    }
+
+    function setSetupPracticeMode(isFull) {
+      playSound('click');
+      state.fullCalculationMode = isFull;
+      const btnOrder = document.getElementById('btn-mode-order');
+      const btnFull = document.getElementById('btn-mode-full');
+
+      if (isFull) {
+        btnFull.classList.add('active');
+        btnFull.querySelector('.mode-check').textContent = '✓';
+        btnOrder.classList.remove('active');
+        btnOrder.querySelector('.mode-check').textContent = '';
+      } else {
+        btnOrder.classList.add('active');
+        btnOrder.querySelector('.mode-check').textContent = '✓';
+        btnFull.classList.remove('active');
+        btnFull.querySelector('.mode-check').textContent = '';
+      }
+    }
+
+    function setPlayerCount(count) {
+      playSound('click');
+      state.playerCount = count;
+      document.querySelectorAll('#player-count-group button').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.count, 10) === count);
+      });
+      document.getElementById('setup-player-badge').textContent =
+        count === 1 ? '單人練習模式' : `${count} 人同場競賽`;
+      renderPlayerSetupSlots();
+    }
+
+    function setTrackLength(len) {
+      playSound('click');
+      state.trackLength = len;
+      document.querySelectorAll('#track-len-group button').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.len, 10) === len);
+      });
+    }
+
+    function setQuestionTimeLimit(val) {
+      playSound('click');
+      state.timeLimit = parseInt(val, 10);
+    }
+
+    function updatePlayerName(idx, val) {
+      state.players[idx].name = val.trim() || PLAYER_DEFAULTS[idx].name;
+    }
+
+    function selectPlayerCharacter(playerIdx, charId) {
+      playSound('click');
+      state.players[playerIdx].charId = charId;
+      renderPlayerSetupSlots();
+    }
+
+    function renderPlayerSetupSlots() {
+      const container = document.getElementById('player-setup-slots');
+      let html = '';
+
+      for (let i = 0; i < state.playerCount; i++) {
+        const p = state.players[i];
+        const currentChar = CHARACTERS.find(c => c.id === p.charId) || CHARACTERS[0];
+
+        const avatarChoices = CHARACTERS.map(c => {
+          const isPicked = c.id === p.charId;
+          return `
+            <button
+              type="button"
+              onclick="selectPlayerCharacter(${i}, '${c.id}')"
+              class="w-9 h-9 sm:w-10 sm:h-10 rounded-full p-0.5 transition transform cursor-pointer ${
+                isPicked
+                  ? 'ring-3 ring-[#FF6B8B] scale-110 bg-white shadow-md'
+                  : 'opacity-70 hover:opacity-100 hover:scale-105 bg-white/70'
+              }"
+              title="${c.name}"
+            >
+              ${c.svg}
+            </button>
+          `;
+        }).join('');
+
+        html += `
+          <div class="bg-[#F8FAFC] border-2 border-[#E2E8F0] rounded-2xl p-2.5 flex flex-col gap-2">
+            <div class="flex items-center gap-2.5">
+              <div class="w-11 h-11 rounded-full border-3 border-white shadow shrink-0 overflow-hidden bg-white">
+                ${currentChar.svg}
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between mb-0.5">
+                  <span class="text-[11px] font-black text-[#718096]">玩家 ${i + 1}（${currentChar.name}）</span>
+                </div>
+                <input
+                  type="text"
+                  value="${p.name}"
+                  oninput="updatePlayerName(${i}, this.value)"
+                  maxlength="12"
+                  placeholder="輸入組別或學生名稱"
+                  class="w-full bg-white border-2 border-[#CBD5E0] focus:border-[#FF85A1] rounded-xl px-2.5 py-1 text-xs sm:text-sm font-black text-[#2D3748] focus:outline-none"
+                />
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-1 pt-1 border-t border-[#EDF2F7]">
+              <span class="text-[11px] font-bold text-[#718096]">頭像：</span>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                ${avatarChoices}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    /* =========================================================================
+     * 6. 啟動課堂賽與多層括號脫式計算引擎
+     * ========================================================================= */
+    function switchView(viewName) {
+      state.view = viewName;
+      document.getElementById('view-setup').classList.toggle('hidden', viewName !== 'setup');
+      document.getElementById('view-game').classList.toggle('hidden', viewName !== 'game');
+      document.getElementById('view-podium').classList.toggle('hidden', viewName !== 'podium');
+      document.getElementById('main-railway-bg').classList.toggle('hidden', viewName !== 'game');
+    }
+
+    function returnToSetup() {
+      stopTimer();
+      closeKeypad();
+      playSound('click');
+      switchView('setup');
+    }
+
+    function startClassroomRace() {
+      playSound('whistle');
+      closeKeypad();
+
+      // Reset Player Race Stats
+      for (let i = 0; i < state.playerCount; i++) {
+        state.players[i].score = 0;
+        state.players[i].progress = 0; // number of solved questions
+        state.players[i].totalTimeMs = 0;
+      }
+
+      // Build Question Pool matching selected topics
+      const filteredPool = QUESTION_BANK.filter(q => state.selectedTopics.has(q.topic));
+      const pool = filteredPool.length > 0 ? filteredPool : QUESTION_BANK;
+
+      // Total questions across the race:
+      // In single player, trackLength questions; in multiplayer, trackLength questions per player (or shared round-robin)
+      const totalTurns = state.playerCount === 1 ? state.trackLength : state.trackLength * state.playerCount;
+      const generated = [];
+      let lastPicked = null;
+
+      for (let i = 0; i < totalTurns; i++) {
+        const candidates = pool.length > 1 ? pool.filter(q => q !== lastPicked) : pool;
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+        lastPicked = chosen;
+        generated.push(JSON.parse(JSON.stringify(chosen)));
+      }
+
+      state.raceQuestions = generated;
+      state.questionIndex = 0;
+      state.activePlayerIndex = 0;
+
+      // Sync top mode toggle display
+      updateInGameModeButton();
+      switchView('game');
+      loadCurrentRaceQuestion();
+    }
+
+    function toggleInGamePracticeMode() {
+      playSound('click');
+      state.fullCalculationMode = !state.fullCalculationMode;
+      setSetupPracticeMode(state.fullCalculationMode);
+      updateInGameModeButton();
+      resetCurrentStep();
+    }
+
+    function updateInGameModeButton() {
+      document.getElementById('game-mode-icon').textContent = state.fullCalculationMode ? '🧮' : '⚡';
+      document.getElementById('game-mode-text').textContent = state.fullCalculationMode ? '順序＋計算' : '只練順序';
+    }
+
+    /**
+     * 找出當前算式 tokens 中，最優先計算的運算子索引（最高 priority）
+     */
+    function findHighestPriorityOpIndex(tokens) {
+      let bestIdx = -1;
+      let maxPriority = -Infinity;
+
+      for (let i = 0; i < tokens.length; i++) {
+        if (tokens[i].type === 'op') {
+          if (tokens[i].priority > maxPriority) {
+            maxPriority = tokens[i].priority;
+            bestIdx = i;
+          }
+        }
+      }
+      return bestIdx;
+    }
+
+    /**
+     * 計算兩個數字與運算子的結果
+     */
+    function computeBinary(a, op, b) {
+      switch (op) {
+        case '+': return a + b;
+        case '-': return a - b;
+        case '×': return a * b;
+        case '÷': return Math.round(a / b);
+        default: return a;
+      }
+    }
+
+    /**
+     * 將目前的 tokens 格式化成乾淨統一的黑板粉筆算式 HTML（不加任何預先底線暗示，讓學生獨立思考）
+     */
+    function formatTokensToBlackboardHTML(tokens) {
+      if (tokens.length === 1) {
+        return `<span class="text-[#FFB5C2]">${tokens[0].val}</span> <span class="text-xl ml-1">🎉</span>`;
+      }
+
+      let html = '';
+      for (let i = 0; i < tokens.length; i++) {
+        const t = tokens[i];
+        if (t.type === 'num') {
+          const openStr = (t.open || []).join(' ');
+          const closeStr = (t.close || []).join(' ');
+          html += `${openStr ? `<span class="text-[#FF9EB5] mr-1">${openStr}</span>` : ''}<span>${t.val}</span>${closeStr ? `<span class="text-[#FF9EB5] ml-1">${closeStr}</span>` : ''}`;
+        } else if (t.type === 'op') {
+          html += `<span class="mx-1.5">${t.val}</span>`;
+        }
+      }
+      return html;
+    }
+
+    function loadCurrentRaceQuestion() {
+      const q = state.raceQuestions[state.questionIndex];
+      state.tokens = JSON.parse(JSON.stringify(q.tokens));
+      state.isQuestionSolved = false;
+      state.questionStartTime = Date.now();
+
+      // 初始黑板僅顯示乾淨統一的原始題目，不預先標示先計算底線
+      state.historyLines = [
+        {
+          isFirst: true,
+          html: formatTokensToBlackboardHTML(state.tokens)
+        }
+      ];
+
+      // Update Header Topic & Progress
+      const topicObj = TOPICS.find(t => t.id === q.topic) || TOPICS[0];
+      document.getElementById('active-topic-tag').textContent = topicObj.title;
+      document.getElementById('rule-hint-chip').textContent = q.ruleText;
+
+      const currentPlayer = state.players[state.activePlayerIndex];
+      const currentChar = CHARACTERS.find(c => c.id === currentPlayer.charId) || CHARACTERS[0];
+
+      if (state.playerCount === 1) {
+        document.getElementById('question-progress-tag').textContent = `第 ${state.questionIndex + 1} / ${state.trackLength} 題`;
+      } else {
+        const roundNum = Math.floor(state.questionIndex / state.playerCount) + 1;
+        document.getElementById('question-progress-tag').textContent = `第 ${roundNum} / ${state.trackLength} 輪`;
+      }
+
+      // Update Active Driver Avatar on Locomotive & Blackboard Badge
+      document.getElementById('loco-driver-avatar').innerHTML = currentChar.svg;
+      document.getElementById('active-player-turn-badge').innerHTML = `
+        <span class="w-5 h-5 rounded-full overflow-hidden inline-block bg-white border border-[#8A5A00]">${currentChar.svg}</span>
+        <span>輪到：${currentPlayer.name}</span>
+      `;
+
+      // Animate Train Arrival
+      const trainEl = document.getElementById('train-container');
+      trainEl.classList.remove('train-arrive');
+      void trainEl.offsetWidth;
+      trainEl.classList.add('train-arrive');
+
+      renderRaceTracksPanel();
+      renderBlackboard();
+      renderTrain();
+      setPrompt('👆', '先算哪一步？請點擊小火車上最先計算的運算符號圓形按鈕！', 'normal');
+      startQuestionTimer();
+    }
+
+    function resetCurrentStep() {
+      playSound('click');
+      loadCurrentRaceQuestion();
+    }
+
+    /* =========================================================================
+     * 7. 渲染上方多車道賽況、中央黑板與下方互動火車
+     * ========================================================================= */
+    function renderRaceTracksPanel() {
+      const list = document.getElementById('race-tracks-list');
+      let html = '';
+
+      for (let i = 0; i < state.playerCount; i++) {
+        const p = state.players[i];
+        const char = CHARACTERS.find(c => c.id === p.charId) || CHARACTERS[0];
+        const isTurn = i === state.activePlayerIndex;
+        const pct = Math.min(100, Math.round((p.progress / state.trackLength) * 100));
+
+        html += `
+          <div class="flex items-center gap-2.5 ${isTurn ? 'opacity-100' : 'opacity-75'}">
+            <div class="w-32 sm:w-40 shrink-0 flex items-center gap-1.5">
+              <div class="w-7 h-7 rounded-full border-2 ${isTurn ? 'border-[#FF6B8B] ring-2 ring-[#FFB5C2]' : 'border-white'} overflow-hidden bg-white shrink-0">
+                ${char.svg}
+              </div>
+              <span class="text-xs font-black truncate ${isTurn ? 'text-[#D95374]' : 'text-[#4A5568]'}">
+                ${p.name}
+              </span>
+            </div>
+
+            <!-- Mini Track Progress -->
+            <div class="flex-1 relative h-6 bg-[#EDF2F7] rounded-full border-2 border-white shadow-inner flex items-center px-2">
+              <div
+                class="h-2.5 rounded-full transition-all duration-500 ${
+                  isTurn ? 'bg-gradient-to-r from-[#FF9EB5] to-[#FFB84D]' : 'bg-[#A8E6CF]'
+                }"
+                style="width: ${Math.max(6, pct)}%"
+              ></div>
+              <!-- Mini Train Icon at current progress -->
+              <div
+                class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 transition-all duration-500 text-base"
+                style="left: calc(${Math.min(96, Math.max(4, pct))}%)"
+              >
+                🚂
+              </div>
+              <span class="ml-auto text-[11px] font-black text-[#718096] z-10">🏁</span>
+            </div>
+
+            <div class="w-16 text-right text-xs font-black text-[#E67E22] shrink-0">
+              ⭐ ${p.progress}/${state.trackLength}
+            </div>
+          </div>
+        `;
+      }
+
+      list.innerHTML = html;
+    }
+
+    function renderBlackboard() {
+      const board = document.getElementById('chalkboard-content');
+      board.innerHTML = state.historyLines
+        .map((line, idx) => {
+          if (line.isFirst) {
+            return `<div class="text-2xl sm:text-3xl tracking-wider">${line.html}</div>`;
+          }
+          return `
+            <div class="text-xl sm:text-2xl mt-1 flex items-center gap-2 pop-merge">
+              <span class="text-[#A8E6CF]">=</span>
+              <div>${line.html}</div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    const CARRIAGE_THEMES = [
+      { body: '#FF9EB5', roof: '#FFE680', border: '#8C3B50', wheel: '#FFE680' },
+      { body: '#89CFF0', roof: '#FFB5C2', border: '#35637A', wheel: '#FFE680' },
+      { body: '#A8E6CF', roof: '#FFE680', border: '#2E755D', wheel: '#FF9EB5' },
+      { body: '#D8C2FF', roof: '#A8E6CF', border: '#5A3E8C', wheel: '#FFE680' }
+    ];
+
+    function createCarriageSVG(num, themeIndex, isMerged = false) {
+      const theme = CARRIAGE_THEMES[themeIndex % CARRIAGE_THEMES.length];
+      const width = isMerged ? 114 : 96;
+      return `
+        <svg width="${width}" height="102" viewBox="0 0 120 120" class="drop-shadow-md">
+          <rect x="8" y="14" width="104" height="14" rx="7" fill="${theme.roof}" stroke="${theme.border}" stroke-width="3" />
+          <rect x="12" y="26" width="96" height="64" rx="14" fill="${theme.body}" stroke="${theme.border}" stroke-width="3" />
+          <rect x="18" y="42" width="11" height="22" rx="4" fill="#FFFDF7" opacity="0.85" />
+          <rect x="91" y="42" width="11" height="22" rx="4" fill="#FFFDF7" opacity="0.85" />
+          <rect x="33" y="36" width="54" height="44" rx="10" fill="#FFFDF7" stroke="${theme.border}" stroke-width="2.5" />
+          <text x="60" y="67" text-anchor="middle" font-size="27" font-weight="900" fill="#2D3748" font-family="Nunito, Noto Sans TC, sans-serif">
+            ${num}
+          </text>
+          <rect x="8" y="88" width="104" height="10" rx="5" fill="#5D6D7E" stroke="#2C3E50" stroke-width="2.5" />
+          <g class="train-wheel">
+            <circle cx="34" cy="104" r="12" fill="${theme.wheel}" stroke="#5A4214" stroke-width="3" />
+            <circle cx="34" cy="104" r="4" fill="#FFFDF7" />
+          </g>
+          <g class="train-wheel">
+            <circle cx="86" cy="104" r="12" fill="${theme.wheel}" stroke="#5A4214" stroke-width="3" />
+            <circle cx="86" cy="104" r="4" fill="#FFFDF7" />
+          </g>
+        </svg>
+      `;
+    }
+
+    function createOperatorButton(opSymbol, tokenIndex) {
+      let colorClasses = 'bg-gradient-to-b from-[#FFFDF7] to-[#FFF0F5] border-[#F47C94] text-[#D94A6A]';
+      if (opSymbol === '÷') {
+        colorClasses = 'bg-gradient-to-b from-[#FFFDF7] to-[#E6F4FF] border-[#5B9BD5] text-[#2B6CB0]';
+      } else if (opSymbol === '×') {
+        colorClasses = 'bg-gradient-to-b from-[#FFFDF7] to-[#F3EEFF] border-[#9B72F2] text-[#6B46C1]';
+      } else if (opSymbol === '-') {
+        colorClasses = 'bg-gradient-to-b from-[#FFFDF7] to-[#E8F8F5] border-[#4ECDC4] text-[#238A74]';
+      }
+
+      return `
+        <button
+          id="op-btn-${tokenIndex}"
+          onclick="handleOperatorTokenClick(${tokenIndex})"
+          class="clickable-op w-12 h-12 sm:w-14 sm:h-14 mb-5 rounded-full border-4 ${colorClasses} shadow-lg flex items-center justify-center text-2xl sm:text-3xl font-black shrink-0"
+          title="點擊選擇運算符號 ${opSymbol}"
+        >
+          ${opSymbol}
+        </button>
+      `;
+    }
+
+    /**
+     * 根據 tokens 動態渲染火車車廂與多層括號（大 `{ }`、中 `[ ]`、小 `( )`）
+     */
+    function renderTrain() {
+      const area = document.getElementById('train-carriages-area');
+
+      if (state.tokens.length === 1) {
+        const finalAns = state.tokens[0].val;
+        area.innerHTML = `
+          <div class="pop-merge flex items-center gap-2.5">
+            ${createCarriageSVG(finalAns, 0, true)}
+            <div class="mb-6 bg-[#FFE680] border-3 border-white text-[#8A5A00] font-black px-4 py-1.5 rounded-2xl shadow-md text-sm sm:text-base animate-bounce">
+              🌟 太棒了！答案是 ${finalAns}！
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      let themeCounter = 0;
+
+      for (let i = 0; i < state.tokens.length; i++) {
+        const t = state.tokens[i];
+        if (t.type === 'num') {
+          // Open brackets before this number
+          if (t.open && t.open.length > 0) {
+            t.open.forEach(b => {
+              const color = b === '{' ? 'text-[#805AD5]' : b === '[' ? 'text-[#3182CE]' : 'text-[#E05275]';
+              html += `<span class="text-3xl sm:text-4xl font-black ${color} mb-7 select-none">${b}</span>`;
+            });
+          }
+
+          html += `
+            <div onclick="handleCarriageTokenClick(${i})" class="clickable-carriage ${t.merged ? 'pop-merge' : ''}">
+              ${createCarriageSVG(t.val, themeCounter++, !!t.merged)}
+            </div>
+          `;
+
+          // Close brackets after this number
+          if (t.close && t.close.length > 0) {
+            t.close.forEach(b => {
+              const color = b === '}' ? 'text-[#805AD5]' : b === ']' ? 'text-[#3182CE]' : 'text-[#E05275]';
+              html += `<span class="text-3xl sm:text-4xl font-black ${color} mb-7 select-none">${b}</span>`;
+            });
+          }
+        } else if (t.type === 'op') {
+          html += createOperatorButton(t.val, i);
+        }
+      }
+
+      area.innerHTML = html;
+    }
+
+    function setPrompt(emoji, text, tone = 'normal') {
+      const banner = document.getElementById('prompt-banner');
+      document.getElementById('prompt-emoji').textContent = emoji;
+      document.getElementById('prompt-text').textContent = text;
+
+      banner.classList.remove(
+        'border-[#FFE699]',
+        'border-[#FFB5C2]',
+        'border-[#A8E6CF]',
+        'bg-[#FFFDF7]',
+        'bg-[#FFF0F4]',
+        'bg-[#EDFCF6]',
+        'shake-error'
+      );
+
+      if (tone === 'wrong') {
+        banner.classList.add('border-[#FFB5C2]', 'bg-[#FFF0F4]');
+        void banner.offsetWidth;
+        banner.classList.add('shake-error');
+      } else if (tone === 'right') {
+        banner.classList.add('border-[#A8E6CF]', 'bg-[#EDFCF6]');
+      } else {
+        banner.classList.add('border-[#FFE699]', 'bg-[#FFFDF7]');
+      }
+    }
+
+    /* =========================================================================
+     * 8. 互動點擊運算符號、合併車廂與漸進式括號剝除
+     * ========================================================================= */
+    function handleCarriageTokenClick(tokenIdx) {
+      if (state.isQuestionSolved) return;
+      // If it's the leftmost or rightmost carriage, map to its adjacent operator
+      if (tokenIdx === 0 && state.tokens.length >= 3) {
+        handleOperatorTokenClick(1);
+      } else if (tokenIdx === state.tokens.length - 1 && state.tokens.length >= 3) {
+        handleOperatorTokenClick(state.tokens.length - 2);
+      } else {
+        playSound('click');
+        setPrompt('💡', '請直接點擊要先計算的「＋、－、×、÷」圓形運算符號按鈕喔！', 'normal');
+      }
+    }
+
+    function handleOperatorTokenClick(opTokenIndex) {
+      if (state.isQuestionSolved) return;
+      const bestOpIdx = findHighestPriorityOpIndex(state.tokens);
+      const clickedToken = state.tokens[opTokenIndex];
+      if (!clickedToken || clickedToken.type !== 'op') return;
+
+      if (opTokenIndex === bestOpIdx) {
+        // Correct order!
+        playSound('right');
+        spawnConfetti(26);
+        setPrompt('🎉', clickedToken.hint || '答對了！這一步最優先計算！', 'right');
+
+        const leftNum = state.tokens[opTokenIndex - 1].val;
+        const rightNum = state.tokens[opTokenIndex + 1].val;
+        const stepResult = computeBinary(leftNum, clickedToken.val, rightNum);
+
+        if (state.fullCalculationMode) {
+          state.pendingOpTokenIndex = opTokenIndex;
+          state.pendingResultValue = stepResult;
+          openKeypad(`${leftNum} ${clickedToken.val} ${rightNum} = ?`);
+        } else {
+          // Order-only mode: merge immediately
+          applyTokenReduction(opTokenIndex, stepResult);
+        }
+      } else {
+        // Wrong order -> Positive encouragement ("錯誤是學習的機會")
+        playSound('wrong');
+        const btn = document.getElementById(`op-btn-${opTokenIndex}`);
+        if (btn) {
+          btn.classList.remove('shake-error');
+          void btn.offsetWidth;
+          btn.classList.add('shake-error');
+        }
+        setPrompt('🤔', `錯誤是學習的機會！${clickedToken.hint || '再想一想括號和先乘除後加減的規則喔！'}`, 'wrong');
+      }
+    }
+
+    /**
+     * 將 tokens[opIdx - 1], tokens[opIdx], tokens[opIdx + 1] 合併為一個新數字節點，
+     * 並自動剝除已經計算完畢的成對括號（例如 (16 ÷ 4) 算完變成 4 後，這組小括號自動消除，外層中括號繼續保留！）
+     */
+    function applyTokenReduction(opIdx, resultValue) {
+      const leftTok = state.tokens[opIdx - 1];
+      const rightTok = state.tokens[opIdx + 1];
+
+      let openBrackets = [...(leftTok.open || [])];
+      let closeBrackets = [...(rightTok.close || [])];
+
+      // 如果這兩個相鄰數字剛好被一對括號包住，算完後移除最內層這對括號
+      if (openBrackets.length > 0 && closeBrackets.length > 0) {
+        const innerOpen = openBrackets[openBrackets.length - 1];
+        const innerClose = closeBrackets[0];
+        const isMatchingPair =
+          (innerOpen === '(' && innerClose === ')') ||
+          (innerOpen === '[' && innerClose === ']') ||
+          (innerOpen === '{' && innerClose === '}');
+
+        if (isMatchingPair) {
+          openBrackets.pop();
+          closeBrackets.shift();
+        }
+      }
+
+      const mergedToken = {
+        type: 'num',
+        val: resultValue,
+        merged: true,
+        open: openBrackets,
+        close: closeBrackets
+      };
+
+      // Replace [left, op, right] with [mergedToken]
+      state.tokens.splice(opIdx - 1, 3, mergedToken);
+
+      // 在學生選對並完成這一步後，黑板展開下一行乾淨的脫式化簡結果（不預先畫下一步底線）
+      state.historyLines.push({
+        isFirst: false,
+        html: formatTokensToBlackboardHTML(state.tokens)
+      });
+
+      renderBlackboard();
+      renderTrain();
+
+      // Check if completely simplified to 1 number
+      if (state.tokens.length === 1) {
+        handleQuestionCompleted();
+      } else {
+        setPrompt('✨', '太棒了！車廂合併成功，接著繼續點擊下一步要先算的符號！', 'right');
+      }
+    }
+
+    function handleQuestionCompleted() {
+      state.isQuestionSolved = true;
+      stopTimer();
+      playSound('whistle');
+      spawnConfetti(65);
+
+      const elapsedMs = Date.now() - state.questionStartTime;
+      const currentPlayer = state.players[state.activePlayerIndex];
+      currentPlayer.progress += 1;
+      currentPlayer.score += 100;
+      currentPlayer.totalTimeMs += elapsedMs;
+
+      renderRaceTracksPanel();
+      document.querySelectorAll('.train-wheel').forEach(w => w.classList.add('wheel-spin'));
+      setPrompt('🏆', `${currentPlayer.name} 完成本題！小火車加速前進！`, 'right');
+
+      setTimeout(() => {
+        document.querySelectorAll('.train-wheel').forEach(w => w.classList.remove('wheel-spin'));
+        advanceToNextTurn();
+      }, 1750);
+    }
+
+    function advanceToNextTurn() {
+      state.questionIndex += 1;
+      if (state.questionIndex >= state.raceQuestions.length) {
+        showPodiumScreen();
+        return;
+      }
+
+      // Rotate player in multiplayer mode
+      state.activePlayerIndex = state.questionIndex % state.playerCount;
+      loadCurrentRaceQuestion();
+    }
+
+    /* =========================================================================
+     * 9. 倒數計時器與馬卡龍數字鍵盤
+     * ========================================================================= */
+    function startQuestionTimer() {
+      stopTimer();
+      const wrapper = document.getElementById('timer-bar-wrapper');
+      if (!state.timeLimit || state.timeLimit <= 0) {
+        wrapper.classList.add('hidden');
+        return;
+      }
+
+      wrapper.classList.remove('hidden');
+      state.timeLeft = state.timeLimit;
+      updateTimerVisual();
+
+      state.timerInterval = setInterval(() => {
+        state.timeLeft = Math.max(0, +(state.timeLeft - 0.2).toFixed(1));
+        updateTimerVisual();
+
+        if (state.timeLeft <= 0) {
+          stopTimer();
+          closeKeypad();
+          playSound('wrong');
+          setPrompt('⏰', '時間到囉！沒關係，小火車準備進入下一題繼續加油！', 'wrong');
+          setTimeout(() => {
+            advanceToNextTurn();
+          }, 1500);
+        }
+      }, 200);
+    }
+
+    function stopTimer() {
+      if (state.timerInterval) {
+        clearInterval(state.timerInterval);
+        state.timerInterval = null;
+      }
+    }
+
+    function updateTimerVisual() {
+      const pct = Math.min(100, Math.max(0, (state.timeLeft / state.timeLimit) * 100));
+      document.getElementById('timer-fill').style.width = `${pct}%`;
+      document.getElementById('timer-text').textContent = `${Math.ceil(state.timeLeft)}s`;
+    }
+
+    function openKeypad(equationText) {
+      state.keypadValue = '';
+      document.getElementById('keypad-equation').textContent = equationText;
+      document.getElementById('keypad-input-display').textContent = '_';
+      document.getElementById('keypad-feedback').textContent = '';
+      document.getElementById('keypad-overlay').classList.remove('hidden');
+    }
+
+    function closeKeypad() {
+      document.getElementById('keypad-overlay').classList.add('hidden');
+    }
+
+    function pressKey(digit) {
+      playSound('click');
+      if (state.keypadValue.length >= 4) return;
+      state.keypadValue += digit;
+      document.getElementById('keypad-input-display').textContent = state.keypadValue;
+      document.getElementById('keypad-feedback').textContent = '';
+    }
+
+    function clearKey() {
+      playSound('click');
+      state.keypadValue = '';
+      document.getElementById('keypad-input-display').textContent = '_';
+      document.getElementById('keypad-feedback').textContent = '';
+    }
+
+    function submitKeyAnswer() {
+      const userVal = parseInt(state.keypadValue, 10);
+      if (isNaN(userVal)) {
+        document.getElementById('keypad-feedback').textContent = '請先輸入數字喔！';
+        return;
+      }
+
+      if (userVal === state.pendingResultValue) {
+        playSound('right');
+        closeKeypad();
+        spawnConfetti(30);
+        applyTokenReduction(state.pendingOpTokenIndex, state.pendingResultValue);
+      } else {
+        playSound('wrong');
+        document.getElementById('keypad-feedback').textContent = '差一點點，再仔細算一次這一步喔！';
+      }
+    }
+
+    /* =========================================================================
+     * 10. 頒獎台結算畫面
+     * ========================================================================= */
+    function showPodiumScreen() {
+      stopTimer();
+      closeKeypad();
+      playSound('whistle');
+      spawnConfetti(85);
+      switchView('podium');
+
+      const activePlayers = state.players.slice(0, state.playerCount).map((p, idx) => ({
+        ...p,
+        originalIndex: idx,
+        avgSec: p.progress > 0 ? (p.totalTimeMs / 1000 / p.progress).toFixed(1) : '--'
+      }));
+
+      // Sort by score descending, then totalTimeMs ascending
+      activePlayers.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.totalTimeMs - b.totalTimeMs;
+      });
+
+      const container = document.getElementById('podium-cards-container');
+      const medals = ['🥇 冠軍', '🥈 亞軍', '🥉 季軍', '🏅 優異獎'];
+      const heights = ['min-h-[240px]', 'min-h-[205px]', 'min-h-[185px]', 'min-h-[175px]'];
+      const bgColors = [
+        'from-[#FFF7CC] to-[#FFE680] border-[#F6AD55]',
+        'from-[#F7FAFC] to-[#E2E8F0] border-[#A0AEC0]',
+        'from-[#FFF5F5] to-[#FED7D7] border-[#F687B3]',
+        'from-[#EBF8FF] to-[#BEE3F8] border-[#63B3ED]'
+      ];
+
+      container.innerHTML = activePlayers
+        .map((p, rank) => {
+          const char = CHARACTERS.find(c => c.id === p.charId) || CHARACTERS[0];
+          return `
+            <div class="w-52 sm:w-56 bg-gradient-to-b ${bgColors[rank]} border-4 rounded-3xl p-4 shadow-xl flex flex-col items-center justify-between ${heights[rank]} pop-merge">
+              <div class="bg-white/90 px-3.5 py-1 rounded-full text-sm font-black text-[#4A5568] shadow-sm">
+                ${medals[rank]}
+              </div>
+
+              <div class="w-20 h-20 rounded-full border-4 border-white shadow-md overflow-hidden bg-white my-2">
+                ${char.svg}
+              </div>
+
+              <div class="text-center">
+                <div class="text-base font-black text-[#2D3748]">${p.name}</div>
+                <div class="text-xs font-bold text-[#718096]">車長：${char.name}</div>
+              </div>
+
+              <div class="w-full bg-white/80 rounded-2xl p-2 mt-2 text-center text-xs font-black text-[#4A5568]">
+                <div>完成題數：${p.progress} / ${state.trackLength} 題</div>
+                <div class="text-[#D95374] mt-0.5">總積分：${p.score} 分｜平均 ${p.avgSec} 秒</div>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    /* =========================================================================
+     * 11. 輔助效果與初始化
+     * ========================================================================= */
+    function buildRailwaySleepers() {
+      const container = document.getElementById('railway-sleepers');
+      let html = '';
+      for (let x = 10; x < 1440; x += 44) {
+        html += `<rect x="${x}" y="22" width="24" height="11" rx="3" />`;
+      }
+      container.innerHTML = html;
+    }
+
+    function spawnConfetti(count = 35) {
+      const layer = document.getElementById('confetti-layer');
+      const colors = ['#FF85A1', '#FFE680', '#7CD4B8', '#89CFF0', '#D8C2FF', '#FFB84D'];
+
+      for (let i = 0; i < count; i++) {
+        const el = document.createElement('div');
+        el.className = 'confetti-piece';
+        el.style.backgroundColor = colors[i % colors.length];
+        el.style.left = `${30 + Math.random() * 45}%`;
+        el.style.top = `${30 + Math.random() * 25}%`;
+        const tx = (Math.random() - 0.5) * 480;
+        const ty = (Math.random() - 0.7) * 380;
+        el.style.setProperty('--tx', `${tx}px`);
+        el.style.setProperty('--ty', `${ty}px`);
+        layer.appendChild(el);
+        setTimeout(() => el.remove(), 1700);
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      const overlay = document.getElementById('keypad-overlay');
+      if (overlay.classList.contains('hidden')) return;
+      if (e.key >= '0' && e.key <= '9') {
+        pressKey(e.key);
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        clearKey();
+      } else if (e.key === 'Enter') {
+        submitKeyAnswer();
+      }
+    });
+
+    window.onload = function () {
+      buildRailwaySleepers();
+      renderTopicCards();
+      renderPlayerSetupSlots();
+      switchView('setup');
+    };
+  </script>
+</body>
+</html>
